@@ -21,6 +21,7 @@ fixed_parameters <- list(
   ttest_alpha = 0.05,
   safe.ctl = .01,
   safe.dev = .4,
+  safe.dec = .01,
   t_vec = c()
 )
 fixed_parameters$t_vec <- with(fixed_parameters, 
@@ -30,9 +31,11 @@ experiment_parameters <- list(
   n_trials = 15,
   n_subjects = 20,
   risky.ctl = 0.01,
-  risky.dev = .4
+  risky.dev = .4,
+  risky.dec= .4
   #risky.dev = c(.425, .45, .475),
   #risky.ctl = c(.03, .04, .05)
+  #risky.dec= c(0.01, 0.03, .05, 0.07)
 )
 
 #exportCluster(cl=cl, )
@@ -40,7 +43,7 @@ experiment_parameters <- list(
 run_sim_experiment <- function(id=1, experiment_parameters, fixed_parameters, load_from_file=FALSE) { 
   set.seed(id)
   attach(experiment_parameters)
-  subj_params = list(subj=NA, dev=NA, ctl=NA)
+  subj_params = list(subj=NA, risky.dev=NA, risky.ctl=NA, risky.dec=NA, n_trials=NA)
 
   if (load_from_file) { 
     pattern <- paste('ctl-', risky.ctl, '_dev-', risky.dev, sep="")
@@ -61,6 +64,7 @@ run_sim_experiment <- function(id=1, experiment_parameters, fixed_parameters, lo
       source(paste(gitdir, "mouseSimulation.R", sep=""))
       subj_params$risky.dev <- risky.dev
       subj_params$risky.ctl <- risky.ctl
+      subj_params$risky.dec <- risky.dec
       subj_params$n_trials <- n_trials
       subj_params$subj <- s
 
@@ -125,80 +129,110 @@ run_sim_experiment <- function(id=1, experiment_parameters, fixed_parameters, lo
 }
 
 
-plot.sim <- function(ctl, dev) { 
+plot.sim <- function(ctl, dev, dec) { 
   require(ggplot2)
   require(gridExtra)
   all_dat <- c()
   res <- c()
   for (ct in ctl) { 
   for (dv in dev) { 
-    pattern <- paste('ctl-', ct, '_dev-', dv, "_", sep="")
+  for (dc in dec) { 
+    if (dc == 0) { 
+      pattern <- paste('ctl-', ct, '_dev-', dv, "_[A-Z]", sep="")
+    } else { 
+      pattern <- paste('ctl-', ct, '_dev-', dv, '_dec-', dc, "_", sep="")
+    }
     fname <- list.files(pattern=pattern) 
     tryCatch({
       load(fname)
       for ( i in 1:length(X) ) { 
-        all_dat <- rbind(all_dat, c(ct, dv, X[[i]]$result))
+        all_dat <- rbind(all_dat, c(ct, dv, dc, X[[i]]$result))
       }
     }, error = function(e) { print(paste(pattern, "not found!")) })
   }
   }
+  }
   all_dat <- data.frame(all_dat)
-  names(all_dat) <- c("Control_Noise", "Initial_Deviation", "t_test", "MAD",
-                       "MAD_Time", "AAD", "fANOVA")
+  names(all_dat) <- c("Control_Noise", "Initial_Deviation","Decision_Noise",
+                      "t_test", "MaxAD", "MaxAD_Time", "MAD", "fANOVA")
   all_dat$Initial_Deviation <- factor(all_dat$Initial_Deviation)
   all_dat$Control_Noise <- factor(all_dat$Control_Noise)
+  all_dat$Decision_Noise <- factor(all_dat$Decision_Noise)
 
-  p1 <- ggplot(subset(all_dat, Control_Noise==0.01), 
+  p1 <- ggplot(subset(all_dat, Control_Noise==0.01 & Decision_Noise==0), 
                aes(x=Initial_Deviation, y=fANOVA)) +
 	           geom_violin(scale="width")
-  p2 <- ggplot(subset(all_dat, Control_Noise==0.01), 
-               aes(x=Initial_Deviation, y=AAD)) +
-	  geom_violin(scale="width")
-  p3 <- ggplot(subset(all_dat, Control_Noise==0.01), 
+  p2 <- ggplot(subset(all_dat, Control_Noise==0.01 & Decision_Noise==0), 
                aes(x=Initial_Deviation, y=MAD)) +
 	  geom_violin(scale="width")
-  p4 <- ggplot(subset(all_dat, Control_Noise==0.01), 
-               aes(x=Initial_Deviation, y=MAD_Time)) +
+  p3 <- ggplot(subset(all_dat, Control_Noise==0.01 & Decision_Noise==0), 
+               aes(x=Initial_Deviation, y=MaxAD)) +
 	  geom_violin(scale="width")
-  p5 <- ggplot(subset(all_dat, Control_Noise==0.01), 
+  p4 <- ggplot(subset(all_dat, Control_Noise==0.01 & Decision_Noise==0), 
+               aes(x=Initial_Deviation, y=MaxAD_Time)) +
+	  geom_violin(scale="width")
+  p5 <- ggplot(subset(all_dat, Control_Noise==0.01 & Decision_Noise==0), 
                aes(x=Initial_Deviation, y=t_test)) +
 	  geom_violin(scale="width")
   grid.arrange(p1, p2, p3, p4, p5, nrow=5)
 
-  p1 <- ggplot(subset(all_dat, Initial_Deviation==0.4), 
+  p1 <- ggplot(subset(all_dat, Initial_Deviation==0.4 & Decision_Noise==0), 
                aes(x=Control_Noise, y=fANOVA)) +
 	  geom_violin(scale="width")
-  p2 <- ggplot(subset(all_dat, Initial_Deviation==0.4), 
-               aes(x=Control_Noise, y=AAD)) +
-	  geom_violin(scale="width")
-  p3 <- ggplot(subset(all_dat, Initial_Deviation==0.4), 
+  p2 <- ggplot(subset(all_dat, Initial_Deviation==0.4 & Decision_Noise==0), 
                aes(x=Control_Noise, y=MAD)) +
 	  geom_violin(scale="width")
-  p4 <- ggplot(subset(all_dat, Initial_Deviation==0.4), 
-               aes(x=Control_Noise, y=MAD_Time)) +
+  p3 <- ggplot(subset(all_dat, Initial_Deviation==0.4 & Decision_Noise==0), 
+               aes(x=Control_Noise, y=MaxAD)) +
 	  geom_violin(scale="width")
-  p5 <- ggplot(subset(all_dat, Initial_Deviation==0.4), 
+  p4 <- ggplot(subset(all_dat, Initial_Deviation==0.4 & Decision_Noise==0), 
+               aes(x=Control_Noise, y=MaxAD_Time)) +
+	  geom_violin(scale="width")
+  p5 <- ggplot(subset(all_dat, Initial_Deviation==0.4 & Decision_Noise==0), 
                aes(x=Control_Noise, y=t_test)) +
 	  geom_violin(scale="width")
   grid.arrange(p1, p2, p3, p4, p5, nrow=5)
+
+
+  p1 <- ggplot(subset(all_dat, Control_Noise==0.01& Initial_Deviation==0.4),
+               aes(x=Decision_Noise, y=fANOVA)) +
+	  geom_violin(scale="width")
+  p2 <- ggplot(subset(all_dat, Control_Noise==0.01& Initial_Deviation==0.4),
+               aes(x=Decision_Noise, y=MAD)) +
+	  geom_violin(scale="width")
+  p3 <- ggplot(subset(all_dat, Control_Noise==0.01& Initial_Deviation==0.4),
+               aes(x=Decision_Noise, y=MaxAD)) +
+	  geom_violin(scale="width")
+  p4 <- ggplot(subset(all_dat, Control_Noise==0.01& Initial_Deviation==0.4),
+               aes(x=Decision_Noise, y=MaxAD_Time)) +
+	  geom_violin(scale="width")
+  p5 <- ggplot(subset(all_dat, Control_Noise==0.01& Initial_Deviation==0.4),
+               aes(x=Decision_Noise, y=t_test)) +
+	  geom_violin(scale="width")
+  grid.arrange(p1, p2, p3, p4, p5, nrow=5)
+
   return(all_dat)
 }
 
 
-plot.roc <- function(all_dat, param=c("Initial_Deviation", "Control_Noise")) { 
-  test_names <- c("t_test", "MAD", "MAD_Time", "AAD", "fANOVA")
+plot.roc <- function(all_dat, param=c("Initial_Deviation", "Control_Noise", "Decision_Noise")) { 
+  test_names <- c("t_test", "MaxAD", "MaxAD_Time", "MAD", "fANOVA")
   setEPS()
   postscript(paste(param, "roc.eps", sep="_"), width=7.45, height = 2.5)
   par(mfrow=c(1,3), mar=c(4, 3, 3, 2)+.1)
 
   if (param == "Initial_Deviation") { 
     base_targ <- .4
-    dat <- subset(all_dat, Control_Noise == 0.01)
+    dat <- subset(all_dat, Control_Noise == 0.01 & Decision_Noise == 0)
     lvls = c(.425, .45, .475)
-  } else { 
+  } else if (param == "Control_Noise") { 
     base_targ <- .01
-    dat <- subset(all_dat, Initial_Deviation == 0.4)
+    dat <- subset(all_dat, Initial_Deviation == 0.4 & Decision_Noise == 0)
     lvls = c(.02, .03, .04)
+  } else if (param == "Decision_Noise") { 
+    base_targ <- .01
+    dat <- subset(all_dat, Control_Noise == 0.01 & Initial_Deviation == 0.4)
+    lvls = c(.03, .05, .07)
   }
   dat$t_test <- 1-dat$t_test
   for( comp in lvls) { 
@@ -207,7 +241,7 @@ plot.roc <- function(all_dat, param=c("Initial_Deviation", "Control_Noise")) {
          main="")
     if(param == "Initial_Deviation") { 
       title(main=paste(comp, "ms"), line=.8)
-    } else { 
+    } else {# if (param == "Control_Noise") { 
       title(main=comp, line=.8)
     }
     mtext(side=1, text="False Positives", line=2.1, cex=.7)
@@ -232,9 +266,7 @@ plot.roc <- function(all_dat, param=c("Initial_Deviation", "Control_Noise")) {
       j <- j + 1
     }
   }
-  legend.names <- test_names
-  legend.names[1] <- "t-Test"
-  legend.names[3] <- "MAD Time"
+  legend.names <- c("t-Test", "MaxAD", "MaxAD Time", "MAD", "fANOVA")
   legend("bottomright", legend=legend.names, col=1:5, pch=1:5, cex=.9)
   dev.off()
 }
@@ -242,10 +274,11 @@ plot.roc <- function(all_dat, param=c("Initial_Deviation", "Control_Noise")) {
 
 
 #for (dev in c(.425, .45, .475)) { 
-#  experiment_parameters$risky.dev <- dev
+#for (dec in c(.03, .05, .07)) { 
+#  experiment_parameters$risky.dec <- dec
 #  X <- parLapply(cl, 1:150, run_sim_experiment, experiment_parameters=experiment_parameters, fixed_parameters=fixed_parameters, load_from_file=FALSE)
 #  with(experiment_parameters, 
 #       save(X, file=paste("sim_ctl-", risky.ctl, "_dev-", risky.dev, 
-#                          "_", date(), ".Rdata", sep="")))
+#                          "_dec-", risky.dec, "_", date(), ".Rdata", sep="")))
 #}
 

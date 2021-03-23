@@ -25,13 +25,24 @@ run_sim_subj <- function(id, subj_params, fixed_parameters) {
   n_trials <- subj_params$n_trials
   subj <- subj_params$subj
     
-  safe <- rtrajectory(n_trials, initial_acceleration, max_acceleration, 
+  #safe <- rtrajectory(n_trials, initial_acceleration, max_acceleration, 
+  #                    initial_pos, final_pos, sampling_freq, max_t,
+  #                    control_noise = safe.ctl,
+  #                    first_deviation = safe.dev)
+  #risky <- rtrajectory(n_trials, initial_acceleration, max_acceleration, 
+  #                     initial_pos, final_pos, sampling_freq, max_t,
+  #                     control_noise = risky.ctl,
+  #                     first_deviation = risky.dev)
+
+  safe <- rtrajectory_decnoise(n_trials, initial_acceleration, max_acceleration, 
                       initial_pos, final_pos, sampling_freq, max_t,
                       control_noise = safe.ctl,
+                      dec_noise = safe.dec,
                       first_deviation = safe.dev)
-  risky <- rtrajectory(n_trials, initial_acceleration, max_acceleration, 
+  risky <- rtrajectory_decnoise(n_trials, initial_acceleration, max_acceleration, 
                        initial_pos, final_pos, sampling_freq, max_t,
                        control_noise = risky.ctl,
+                       dec_noise = risky.dec,
                        first_deviation = risky.dev)
 
   chose_safe <- rep(c(TRUE, FALSE), each=n_trials)
@@ -47,14 +58,16 @@ run_sim_subj <- function(id, subj_params, fixed_parameters) {
     if (tr <= n_trials) { 
       all_raw[[tr]] <- list(x=safe[tr,1,], y=safe[tr,2,])
       a <- rotate_trajectory(safe[tr,,], initial_pos, final_pos)
-      all_rt[tr] <- t_vec[length(t_vec) - 
-         max(which(rev(apply(apply(safe[tr,,], 1, diff) ==0, 1, any)[-1])))]
+      all_rt[tr] <- t_vec[max(which(apply(apply(safe[tr,,], 1, diff) != 0, 1, any)))+1]
+      #all_rt[tr] <- t_vec[length(t_vec) - 
+      #   max(which(rev(apply(apply(safe[tr,,], 1, diff) ==0, 1, any)[-1])))]
     } else { 
       tx <- tr - n_trials
       all_raw[[tr]] <- list(x=risky[tx,1,], y=risky[tx,2,])
       a <- rotate_trajectory(risky[tx,,], initial_pos, final_pos)
-      all_rt[tr] <- t_vec[length(t_vec) - 
-        max(which(rev(apply(apply(risky[tx,,], 1, diff) ==0, 1, any)[-1])))]
+      all_rt[tr] <- t_vec[max(which(apply(apply(risky[tx,,], 1, diff) != 0, 1, any)))+1]
+      #all_rt[tr] <- t_vec[length(t_vec) - 
+      #  max(which(rev(apply(apply(risky[tx,,], 1, diff) ==0, 1, any)[-1])))]
     }
     all_clean[[tr]] <- list(Direct=a[1,], Perpendicular=a[2,])
 

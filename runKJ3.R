@@ -223,9 +223,9 @@ analyze.md <- function() {
 
 
     dvnames <- c("AAD", "MAD", "MADtime", "Xflips", "Oflips")
-    dvlabs <- c("Average Absolute Deviation", 
-                "Mean Absolute Deviation", 
-                "MAD Time", "Horizontal Direction Changes", 
+    dvlabs <- c("Mean Absolute Deviation", 
+                "Maximum Absolute Deviation", 
+                "MaxAD Time", "Horizontal Direction Changes", 
                 "Origin Crossings")
     ylabs <- c(rep("Deviation (pixels)", 2), "Time (ms)", 
                rep("Count", 2))
@@ -268,19 +268,21 @@ analyze.md <- function() {
   sd_t <- sqrt(apply((anova_full$residuals)^2, 2, mean)) / sqrt(52)
   
   df_full <- data.frame(Time=rep(dat$times, 2), 
-        Response=rep(c("Risky","Safe"), each=length(out_t)), 
+        Response=rep(c("Risky","Safe"), each=length(dat$times)), 
         Deviation=c(anova_full$gm + anova_full$alpha[[1]][[1]],
                     anova_full$gm + anova_full$alpha[[1]][[2]]))
   df_full$Deviation.lwr <- df_full$Deviation - rep(sd_t, 2)
   df_full$Deviation.upr <- df_full$Deviation + rep(sd_t, 2)
 
+  hues = seq(15, 375, length = 2 + 1)
+
   postscript("kj3_gp.eps", width=9.31, height=3.1)
-  ggplot(data=df_full, aes(x=Time, y=Deviation, group=Choice)) + 
-     geom_ribbon(aes(ymin=Deviation.lwr, ymax=Deviation.upr, fill=Choice)) +
-     scale_fill_manual(values=hcl(h = hues, l = 80, c = 40)[1:n]) + 
-     geom_line(aes(color=Choice)) + 
+  ggplot(data=df_full, aes(x=Time, y=Deviation, group=Response)) + 
+     geom_ribbon(aes(ymin=Deviation.lwr,ymax=Deviation.upr,fill=Response)) +
+     scale_fill_manual(values=hcl(h = hues, l = 80, c = 40)[1:2]) + 
+     geom_line(aes(color=Response)) + 
      xlim(0,12) + 
-     labs(title="Koop and Johnson (2003)", y="Deviation (pixels)",
+     labs(title="Koop and Johnson (2013)", y="Deviation (pixels)",
           breaks=c("risky", "safe"),
           labels=c("Risky", "Safe"))
   dev.off()

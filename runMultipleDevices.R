@@ -232,9 +232,9 @@ analyze.md <- function() {
 
 
     dvnames <- c("AAD", "MAD", "MADtime", "Xflips", "Oflips")
-    dvlabs <- c("Average Absolute Deviation", 
-                "Mean Absolute Deviation", 
-                "MAD Time", "Horizontal Direction Changes", 
+    dvlabs <- c("Mean Absolute Deviation", 
+                "Maximum Absolute Deviation", 
+                "MaxAD Time", "Horizontal Direction Changes", 
                 "Origin Crossings")
     ylabs <- c(rep("Deviation (pixels)", 2), "Time (ms)", 
                rep("Count", 2))
@@ -323,13 +323,14 @@ analyze.md <- function() {
 
   
   plots_gp <- vector("list", 5)
+  conditions <- c("Mouse", "Trackpad", "Wii")
   for (cn in 1:3) { 
     plots_gp[[cn]] <- ggplot(data=subset(df_full,Condition==conditions[cn]),
                              aes(x=Time, y=Deviation, 
                              group=Response)) + 
                       geom_ribbon(aes(ymin=Deviation.lwr, 
                                       ymax=Deviation.upr, fill=Response)) +
-                      scale_fill_manual(values=hclvals) + 
+                      scale_fill_manual(values=fill_cols) + 
                       geom_line(aes(color=Response),
                                     linetype=line_types[cn]) + 
                       xlim(0,12) + 
@@ -341,7 +342,7 @@ analyze.md <- function() {
   postscript("multiple_devices_gp_condition.eps", width=9.31, height=9.1)
   plot_grid(plots_gp[[1]], plots_gp[[2]], plots_gp[[3]], ncol=1)
   dev.off()
-  responses <- levels(df_full$Response)
+  responses <- unique(df_full$Response)
   for (rn in 1:2) { 
     plots_gp[[3+rn]] <- ggplot(data=subset(df_full,Response==responses[rn]),
                              aes(x=Time, y=Deviation, 
